@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Ruta Boavita–Soatá</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: full-screen 3D canvas, HUD in the corners, touch pedals on both sides */
+:root{
+  --sky:#9cc7e6; --ink:#0f1a14; --panel:rgba(14,24,18,.72); --paper:#f3f6ef;
+  --accent:#f2b705; --green:#3f7d3a; --red:#d9442f;
+  --display:"Barlow Condensed",system-ui,sans-serif; --body:"Barlow",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:#0f1a14;color:var(--paper);font-family:var(--body);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;pointer-events:none;font-family:var(--display);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+#speed{right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 10px);text-align:right}
+#speed b{font-size:56px;line-height:.9;font-weight:700;font-variant-numeric:tabular-nums;display:block}
+#speed span{font-size:14px;letter-spacing:.12em;opacity:.85}
+#info{left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 10px);background:var(--panel);
+  border-radius:10px;padding:8px 12px;font-size:15px;letter-spacing:.03em;min-width:150px}
+#info .row{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+#info .lbl{opacity:.7;text-transform:uppercase;font-size:12px;letter-spacing:.1em;align-self:center}
+#bar{height:5px;background:rgba(255,255,255,.2);border-radius:3px;margin-top:6px;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:var(--accent)}
+#mini{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 86px);
+  width:120px;height:120px;background:var(--panel);border-radius:10px;pointer-events:none}
+#warn{left:50%;top:30%;transform:translateX(-50%);font-size:26px;color:var(--accent);opacity:0;transition:opacity .2s;letter-spacing:.08em}
+.pad{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;gap:12px;touch-action:none}
+#padL{left:max(16px,env(safe-area-inset-left,0px))}
+#padR{right:max(16px,env(safe-area-inset-right,0px))}
+.btn{width:78px;height:78px;border-radius:50%;background:rgba(14,24,18,.55);border:2px solid rgba(255,255,255,.35);
+  display:grid;place-items:center;font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--paper)}
+.btn.on{background:rgba(242,183,5,.55);border-color:var(--accent)}
+#gas{height:110px;border-radius:18px;width:70px}
+#brake{border-radius:18px;width:70px;height:78px;align-self:flex-end}
+.btn svg{width:34px;height:34px;fill:currentColor}
+.screen{position:fixed;inset:0;display:grid;place-items:center;background:rgba(15,26,20,.82);z-index:5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.card{max-width:440px;width:100%;text-align:center}
+.card h1{font-family:var(--display);font-size:44px;line-height:1;margin:0 0 6px;letter-spacing:.02em;text-wrap:balance}
+.card p{margin:6px 0;opacity:.9;line-height:1.4}
+.tag{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:var(--accent);color:var(--ink);font-weight:700}
+.tilt{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;font-size:16px;font-weight:600}
+.tilt input{width:22px;height:22px;accent-color:var(--accent)}
+.go{margin-top:16px;font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:.08em;background:var(--accent);color:var(--ink);
+  border:0;border-radius:12px;padding:12px 34px}
+.go:focus-visible{outline:3px solid var(--paper);outline-offset:3px}
+.hint{font-size:13px;opacity:.7}
+[hidden]{display:none!important}
+#sv{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);background:var(--panel);color:var(--paper);
+  text-decoration:none;font-family:var(--display);font-weight:600;letter-spacing:.05em;font-size:15px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);white-space:nowrap}
+#sv:focus-visible{outline:2px solid var(--accent)}
+@media (max-width:620px){#sv{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}}
+#card{position:fixed;margin:0;left:50%;margin-left:calc(min(40vw,300px) / -2);top:calc(env(safe-area-inset-top,0px) + 56px);width:min(40vw,300px);box-sizing:border-box;
+  background:#fff;color:#1a1a1a;padding:6px 6px 8px;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.45);transform:rotate(-2deg);pointer-events:none;
+  animation:cardIn .5s ease-out}
+#card img{display:block;width:100%;height:auto;max-height:calc(100vh - 170px);object-fit:cover;border-radius:3px}
+#card figcaption{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+#card b{font-family:var(--display);font-size:17px;letter-spacing:.02em}
+#card span{font-size:10px;opacity:.7;line-height:1.3}
+@keyframes cardIn{from{transform:translateX(-120%) rotate(-8deg)}to{transform:rotate(-2deg)}}
+@media (max-width:620px){#card{top:calc(env(safe-area-inset-top,0px) + 218px);width:min(66vw,280px);margin-left:calc(min(66vw,280px) / -2)}}
+@media (prefers-reduced-motion:reduce){#card{animation:none}}
+#crash{left:50%;top:42%;transform:translateX(-50%);font-size:40px;color:var(--red);opacity:0;letter-spacing:.06em;font-weight:700}
+#limit{right:calc(max(16px,env(safe-area-inset-right,0px)) + 96px);top:calc(env(safe-area-inset-top,0px) + 12px);width:52px;height:52px;border-radius:50%;
+  background:#fff;border:6px solid var(--red);display:grid;place-items:center;box-sizing:border-box;text-shadow:none}
+#limit b{color:#111;font-size:22px;font-variant-numeric:tabular-nums}
+#limit.over{animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){#warn{transition:none}#limit.over{animation:none}}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&display=swap">
+
+<canvas id="c"></canvas>
+
+<div id="info" class="hud">
+  <div class="row"><span class="lbl">Faltan</span><span id="left">--</span></div>
+  <div class="row"><span class="lbl">Tiempo</span><span id="time">0:00</span></div>
+  <div class="row"><span class="lbl">Altitud</span><span id="alt">--</span></div>
+  <div class="row"><span class="lbl">Choques</span><span id="hits">0</span></div>
+  <div class="row"><span class="lbl">Multas</span><span id="fines">0</span></div>
+  <div class="row" id="tiltBadge" hidden><span class="lbl">Giroscopio</span><span id="tiltVal">0°</span></div>
+  <div id="bar"><i id="barFill"></i></div>
+</div>
+<div id="speed" class="hud"><b id="kmh">0</b><span>KM/H</span></div>
+<canvas id="mini" width="240" height="240"></canvas>
+<div id="warn" class="hud">FUERA DE LA VÍA</div>
+<div id="crash" class="hud">¡CHOQUE!</div>
+<figure id="card" hidden><img id="cardImg" alt=""><figcaption><b id="cardT"></b><span id="cardC"></span></figcaption></figure>
+<div id="limit" class="hud"><b id="limN">60</b></div>
+<a id="sv" target="_blank" rel="noopener" href="https://www.google.com/maps">Ver Street View aquí</a>
+
+<div id="padL" class="pad">
+  <div class="btn" id="left-btn" aria-label="Girar a la izquierda"><svg viewBox="0 0 24 24"><path d="M15 4 6 12l9 8z"/></svg></div>
+  <div class="btn" id="right-btn" aria-label="Girar a la derecha"><svg viewBox="0 0 24 24"><path d="m9 4 9 8-9 8z"/></svg></div>
+</div>
+<div id="padR" class="pad">
+  <div class="btn" id="brake">FRENO</div>
+  <div class="btn" id="gas">ACEL.</div>
+</div>
+
+<div class="screen" id="start">
+  <div class="card">
+    <span class="tag" id="routeTag">Ruta de prueba</span>
+    <h1 id="routeName">Boavita → Soatá</h1>
+    <p id="routeNote">Esta es una carretera de montaña de prueba. La ruta real se carga en cuanto tengamos los datos del mapa.</p>
+    <p class="hint">Ruta: © colaboradores de OpenStreetMap (OSRM). Altitud: Open-Meteo. Fotos: Wikimedia Commons. Vehículos 3D: Kenney (CC0).</p>
+    <p class="hint">Tráfico simulado: carros, busetas, camiones y motos en ambos sentidos. Respeta el límite de velocidad o te ponen multa.</p>
+    <p class="hint">Flechas a la izquierda para girar. Acelerador y freno a la derecha. En computador: teclas de flecha.</p>
+    <label class="tilt"><input type="checkbox" id="tiltChk"> Girar inclinando el celular (giroscopio)</label>
+    <p class="hint" id="tiltMsg" hidden></p>
+    <button class="go" id="goBtn">MANEJAR</button>
+  </div>
+</div>
+<div class="screen" id="end" hidden>
+  <div class="card">
+    <span class="tag">Llegaste</span>
+    <h1 id="endTitle">Soatá</h1>
+    <p id="endStats"></p>
+    <button class="go" id="againBtn">OTRA VEZ</button>
+  </div>
+</div>
+
+<script>
+// Photos: Wikimedia Commons. km = distance along the route where the postcard appears.
+window.PHOTOS=[
+  {km:0,    src:"fotos/foto1.jpg", title:"Parque principal de Boavita", credit:"Petruss · Wikimedia Commons · dominio público"},
+  {km:1.5,  src:"fotos/foto2.jpg", title:"Boavita desde el cerro del Tabor", credit:"Alcaldía de Boavita · Wikimedia Commons · CC BY-SA 4.0"},
+  {km:8,    src:"fotos/foto3.jpg", title:"Cañón del Chicamocha", credit:"Petruss · Wikimedia Commons · dominio público"},
+  {km:13.5, src:"fotos/foto4.jpg", title:"Río Chicamocha, en el fondo del cañón", credit:"0MAMT0 · Wikimedia Commons · CC BY-SA 4.0"},
+  {km:18,   src:"fotos/foto5.jpg", title:"Soatá desde la vereda El Hatillo", credit:"Ricardo8912 · Wikimedia Commons · CC BY-SA 4.0"},
+  {km:22.3, src:"fotos/foto6.jpg", title:"Troncal Central del Norte llegando a Soatá", credit:"Ldpc1 · Wikimedia Commons · CC BY-SA 4.0"},
+  {km:23.5, src:"fotos/foto7.jpg", title:"Parque principal de Soatá", credit:"Petruss · Wikimedia Commons · CC BY-SA 3.0"},
+];
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+// ---------- ROUTE DATA ----------
+// Real road: OSRM route over OpenStreetMap data, Boavita (Carrera 5) to Soatá (Avenida Carrera 5), 23.8 km.
+// Altitude: Open-Meteo elevation API, 100 samples along the route, interpolated.
+const POLY="wtse@vt_zLcAdAdCzBhAfALLp@h@~@v@z@x@[TQNILCRRb@Vj@Pl@@\\IT]Z_@BQAaACg@ZIVB^PzA@`@Yx@CLKJMJc@Hg@Ni@b@Yj@c@dAGbASfABx@Ob@a@`@OVB^p@bABj@IjBDh@Vd@fBdBh@z@v@jAXp@Bp@c@n@yBpAcB`@Qj@AZFXlAnAnAn@Vb@?t@i@tAeBbCeBvBmB\\W^J\\zB`AnDhEx@|@j@fA`Al@Tn@ItAL\\nAnAdApBd@TnAa@pA?z@Dd@Zd@RnAPVb@Aj@AVLVr@r@z@n@f@p@d@`@h@|@P`Cx@dCXPxAd@^XZx@d@p@jA~@|Aj@\\\\Bh@Or@a@x@oBhBqB~As@Xg@Tm@fAmAjAQh@NXp@d@JTBd@e@zDJh@`@TrBG~@Lr@`@\\n@\\f@`@h@d@j@l@r@TfAf@lAHh@cApCJ~AV|Al@f@bAJp@f@pAb@R`@Kj@Ev@D^T\\xBx@v@v@Lt@MdAGdAa@f@?bAYdAK~AiAjA}A`AIl@Or@wAb@u@?aB@_@e@i@[c@Pg@~Ae@b@_AXoABaA{@s@Ak@VQbBi@xALrAWhAN^vA`@b@^Dt@e@pAGlAKbAm@hAQf@w@vAIXJ~AU`AJtAF`Cc@`ALd@j@r@t@j@bAz@hAr@d@p@Xn@v@d@Xp@I^w@d@uAr@k@B_Ab@wA}@cABqAl@sAKYZB\\VLfAIj@N\\\\Cj@]Xk@EqDi@o@NM`@Nb@rARtBnBh@`@fAHfAClAY~@Gd@FTXCRQNw@Gq@p@g@DO\\F\\t@JV^CfAVTt@YjCg@rA[Xi@Le@XOl@N|AjBVLXQP{@b@i@lC{@Tm@p@g@j@w@xB}@VmAAg@]e@a@]@y@J_@RYR@RFLv@A`@|@b@LZm@pABh@Tj@V^Sb@{AEeAz@I`@E|AITm@Ji@b@MbA?t@Tz@TPr@Jd@Tb@t@f@b@l@f@`@j@tAnAXj@^`ABh@Sx@QVqBJcAbAkAHe@d@w@^u@JsBtBiBzBc@zAcArAa@l@iAVu@b@kACWNAb@NLtBA~BOtAUzAKX[Ra@ZkBz@w@dBCz@]\\@NTKb@qC|ASTEj@\\jDc@xAY\\aC`AYC{@g@y@Em@FoAd@yAb@y@Jy@f@o@J_Ah@iAH_Ah@m@ZSEm@MS@i@b@kAX]IYCYPA\\VNrA?^P\\j@l@VZGZu@PIV@d@R^AbAe@dAQhA}@\\K|@LXCh@Ub@Kx@?x@GbAEbAHfAb@l@VpAZbC~@f@f@Jt@Gn@Ur@Wt@w@nCOHQBkBa@cBGeAAy@L[Je@`@Wf@g@|BsBjC[x@Bv@JtBLjAMb@WHy@HuBAoBz@Kz@s@ZiBs@o@CUHk@hACXHFf@Cr@[b@BD\\OPqCzBIn@Uf@g@@}Aq@[DSXDd@NZhB`@ZFh@O^G~@Lv@GZBJTSZuBfBi@vAa@n@AXXfAUXe@NUBUMc@s@IE[?M^|@fB~@rCNjA`@RpAg@t@Dx@h@x@XLVQTWDm@_@s@QqAJY\\[vAW\\[FgA]q@Bs@Zy@TSRA\\NXzAt@Nb@UVi@BoCUa@P[Jc@Me@g@oAHUKS][u@GcAEcF]_@YD]Z_@t@Gl@DzAI`@]Vm@\\OXJh@p@pBGb@YPk@Gw@]q@DUPWf@[x@FTZ^bA\\LPVbAXr@QOK?MAm@TOZ?l@Ix@[d@SvAFjAO\\]RGFuAw@uA\\qAU{An@UBcAHoAb@_AWWBkAh@o@Jy@c@cCBcAWe@e@e@_@gBe@k@AMRFRz@Zb@TJb@Ot@JZZTvAV`DNr@Jh@TZnAj@x@FF\\fAj@Tp@@HPRTDdAzAdArAbBXz@Bp@M\\]`@]Ja@Ca@OcAaAY@YVBXbA~@`@vB?ZMVu@j@KRHTp@XPVQR]DkDe@YUA_@P{@Ms@y@aByAq@s@E{@HeAo@k@G_A_AmAYMo@]q@a@UOAOJEVf@dC\\bCpBfBV\\UxBt@vD\\TlC~@n@f@Ih@w@^_@b@IVGt@Yp@C\\JrDn@xBbAvBGr@eApACj@Dj@fBzCZV|@Jp@VfBnCf@l@Pv@Pt@HRxBp@kAlDn@VvBv@zChAtCdAlCbAZLNXlA^";
+const ELEV_IDX=[0,7,13,20,27,33,40,46,53,60,66,73,80,86,93,100,106,113,119,126,133,139,146,153,159,166,173,179,186,192,199,206,212,219,226,232,239,246,252,259,265,272,279,285,292,299,305,312,319,325,332,338,345,352,358,365,372,378,385,392,398,405,411,418,425,431,438,445,451,458,465,471,478,484,491,498,504,511,518,524,531,538,544,551,557,564,571,577,584,591,597,604,611,617,624,630,637,644,650,657];
+const ELEV=[2179,2161,2154,2175,2163,2166,2150,2145,2103,2101,2113,2104,2088,2118,2122,2096,2066,2065,2062,2044,2033,1999,1973,1932,1898,1876,1888,1883,1877,1879,1786,1791,1768,1744,1723,1723,1708,1706,1691,1694,1674,1633,1632,1656,1631,1580,1569,1524,1508,1478,1475,1440,1421,1407,1394,1403,1375,1396,1362,1414,1366,1390,1417,1406,1429,1461,1450,1471,1484,1502,1519,1528,1539,1555,1569,1560,1564,1583,1604,1604,1678,1688,1702,1707,1733,1751,1756,1770,1786,1807,1825,1824,1840,1875,1881,1863,1901,1948,1970,1982];
+function decodePoly(s){const out=[];let i=0,lat=0,lng=0;while(i<s.length){for(const k of [0,1]){let b,sh=0,r=0;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5;}while(b>=32);const d=(r&1)?~(r>>1):(r>>1);if(k)lng+=d;else lat+=d;}out.push([lat/1e5,lng/1e5]);}return out;}
+
+const ROUTE=(function(){
+  const ll=decodePoly(POLY);
+  const pts=ll.map((p,i)=>{ let k=0; while(k<ELEV_IDX.length-2 && ELEV_IDX[k+1]<i) k++;
+    const a=ELEV_IDX[k],b=ELEV_IDX[k+1],t=Math.min(1,Math.max(0,(i-a)/(b-a)));
+    return [p[0],p[1],ELEV[k]+(ELEV[k+1]-ELEV[k])*t]; });
+  return {name:"Boavita → Soatá", from:"Boavita", to:"Soatá", real:true, points:pts};
+})();
+
+// ---------- GEOMETRY ----------
+const R=6371000, lat0=ROUTE.points[0][0]*Math.PI/180;
+function toXY(p){ // local meters; x east, z south (three.js: -z is north)
+  const x=(p[1]-ROUTE.points[0][1])*Math.PI/180*R*Math.cos(lat0);
+  const z=-(p[0]-ROUTE.points[0][0])*Math.PI/180*R;
+  return [x,z,p[2]];
+}
+// resample every STEP meters, smoothing altitude
+const STEP=4;
+const raw=ROUTE.points.map(toXY);
+const path=[]; // {x,y,z, s}
+(function(){
+  let acc=0; path.push({x:raw[0][0],z:raw[0][1],y:raw[0][2],s:0});
+  let total=0;
+  for(let i=1;i<raw.length;i++){
+    const a=raw[i-1],b=raw[i]; const d=Math.hypot(b[0]-a[0],b[1]-a[1]); if(d<1e-6) continue;
+    let pos=STEP-acc;
+    while(pos<=d){ const t=pos/d; total+=STEP;
+      path.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,y:a[2]+(b[2]-a[2])*t,s:total}); pos+=STEP; }
+    acc=d-(pos-STEP);
+  }
+  // smooth xz lightly and altitude strongly
+  for(let pass=0;pass<3;pass++) for(let i=1;i<path.length-1;i++){
+    path[i].x=(path[i-1].x+2*path[i].x+path[i+1].x)/4; path[i].z=(path[i-1].z+2*path[i].z+path[i+1].z)/4; }
+  const ys=path.map(p=>p.y), K=12;
+  for(let i=0;i<path.length;i++){ let s=0,n=0; for(let j=-K;j<=K;j++){const k=i+j; if(k>=0&&k<path.length){s+=ys[k];n++;}} path[i].y=s/n; }
+  for(let i=0;i<path.length;i++){ // tangent + normal
+    const a=path[Math.max(0,i-1)], b=path[Math.min(path.length-1,i+1)];
+    let tx=b.x-a.x, tz=b.z-a.z; const l=Math.hypot(tx,tz)||1; tx/=l; tz/=l;
+    path[i].tx=tx; path[i].tz=tz; path[i].nx=-tz; path[i].nz=tx; // normal points right of travel
+  }
+})();
+const TOTAL=path[path.length-1].s;
+const ROAD_W=7;
+
+// ---------- THREE SCENE ----------
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9cc7e6);
+scene.fog=new THREE.Fog(0xb7d3e6,150,1400);
+const camera=new THREE.PerspectiveCamera(62,1,0.5,6000);
+scene.add(new THREE.HemisphereLight(0xdfefff,0x4a6b3a,0.85));
+const sun=new THREE.DirectionalLight(0xfff2d6,0.8); sun.position.set(300,500,200); scene.add(sun);
+
+// Ribbon builder: offsets across road normal, with height delta
+function ribbon(segs, color, opts){
+  const pos=[], col=[], idx=[]; const c=new THREE.Color(color);
+  for(let i=0;i<path.length;i++){
+    const p=path[i];
+    for(const [off,dy] of segs){
+      pos.push(p.x+p.nx*off, p.y+dy, p.z+p.nz*off);
+      const shade=1-0.08*((i*7)%3===0?1:0);
+      col.push(c.r*shade,c.g*shade,c.b*shade);
+    }
+  }
+  const W=segs.length;
+  for(let i=0;i<path.length-1;i++) for(let j=0;j<W-1;j++){
+    const a=i*W+j,b=a+1,c2=a+W,d=c2+1; idx.push(a,c2,b,b,c2,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,...(opts||{})}));
+}
+const hw=ROAD_W/2;
+scene.add(ribbon([[-hw,0.06],[hw,0.06]],0x3b3d40,{polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+scene.add(ribbon([[-hw-1.2,0],[-hw,0.02]],0x9b8a6a)); // gravel shoulders
+scene.add(ribbon([[hw,0.02],[hw+1.2,0]],0x9b8a6a));
+// hillsides: uphill on one side, downhill valley on the other, alternating gently
+scene.add(ribbon([[-hw-1.2,-0.05],[-10,0.4],[-16,0.8]],0x4f8a3c));
+scene.add(ribbon([[hw+1.2,-0.05],[10,-0.6],[16,-1.4]],0x5b9446));
+// valley floor far below
+(function(){ let mn=Infinity; path.forEach(p=>mn=Math.min(mn,p.y)); const g=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshLambertMaterial({color:0x6f8f4a,fog:false})); g.rotation.x=-Math.PI/2; g.position.set(path[0].x,mn-60,path[0].z); scene.add(g); })();
+// lane markings: dashed yellow center, white edges
+(function(){
+  const pos=[]; const add=(i,off,w)=>{ const p=path[i],q=path[i+1]; const y=0.1;
+    const a=[p.x+p.nx*(off-w),p.y+y,p.z+p.nz*(off-w)], b=[p.x+p.nx*(off+w),p.y+y,p.z+p.nz*(off+w)];
+    const c=[q.x+q.nx*(off-w),q.y+y,q.z+q.nz*(off-w)], d=[q.x+q.nx*(off+w),q.y+y,q.z+q.nz*(off+w)];
+    pos.push(...a,...c,...b,...b,...c,...d); };
+  const yel=[],wht=[];
+  for(let i=0;i<path.length-1;i++){ if(i%3!==2) yel.push(i); wht.push(i); }
+  const mk=(list,offs,color)=>{ pos.length=0; list.forEach(i=>offs.forEach(o=>add(i,o,0.08))); const P=pos.slice();
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
+    scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide}))); };
+  mk(yel,[0],0xf2c200); mk(wht,[-hw+0.25,hw-0.25],0xeeeeee);
+})();
+// trees and km posts
+(function(){
+  const trunkG=new THREE.CylinderGeometry(0.25,0.3,2,5), topG=new THREE.ConeGeometry(1.8,5,6);
+  const n=Math.floor(path.length/2);
+  const trunks=new THREE.InstancedMesh(trunkG,new THREE.MeshLambertMaterial({color:0x5a3d22}),n);
+  const tops=new THREE.InstancedMesh(topG,new THREE.MeshLambertMaterial({color:0x2f6b2c}),n);
+  const m=new THREE.Matrix4(); let seed=7; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const grid=new Map(), key=(x,z)=>Math.floor(x/10)+','+Math.floor(z/10);
+  path.forEach(p=>{const k=key(p.x,p.z); if(!grid.has(k)) grid.set(k,[]); grid.get(k).push(p);});
+  const nearRoad=(x,z)=>{ for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){ const L=grid.get((Math.floor(x/10)+a)+','+(Math.floor(z/10)+b)); if(L) for(const p of L) if((p.x-x)**2+(p.z-z)**2<(hw+3)**2) return true; } return false; };
+  for(let k=0;k<n;k++){
+    const i=Math.floor(rnd()*path.length), p=path[i];
+    const side=rnd()<0.5?-1:1, off=side*(hw+4+rnd()*20);
+    const s=0.7+rnd()*0.9;
+    const a=Math.abs(off), dy= side<0 ? (a<12?1.2*(a-hw)/(12-hw):1.2+(a-12)*0.2) : -(a<12?1.5*(a-hw)/(12-hw):1.5+(a-12)*0.25);
+    if(nearRoad(p.x+p.nx*off,p.z+p.nz*off)){ m.makeScale(0,0,0); trunks.setMatrixAt(k,m); tops.setMatrixAt(k,m); continue; }
+    m.makeScale(s,s,s); m.setPosition(p.x+p.nx*off,p.y+dy+1*s,p.z+p.nz*off); trunks.setMatrixAt(k,m);
+    m.makeScale(s,s,s); m.setPosition(p.x+p.nx*off,p.y+dy+4.2*s,p.z+p.nz*off); tops.setMatrixAt(k,m);
+  }
+  scene.add(trunks,tops);
+  const postG=new THREE.BoxGeometry(0.3,1.1,0.15), postM=new THREE.MeshLambertMaterial({color:0xffffff});
+  for(let s=1000;s<TOTAL;s+=1000){ const i=Math.round(s/STEP); const p=path[i]; if(!p) continue;
+    const post=new THREE.Mesh(postG,postM); post.position.set(p.x+p.nx*(hw+1.6),p.y+0.55,p.z+p.nz*(hw+1.6)); scene.add(post); }
+  // destination arch
+  const e=path[path.length-1], archM=new THREE.MeshLambertMaterial({color:0xf2b705});
+  for(const o of [-hw-1,hw+1]){ const pole=new THREE.Mesh(new THREE.BoxGeometry(0.5,6,0.5),archM); pole.position.set(e.x+e.nx*o,e.y+3,e.z+e.nz*o); scene.add(pole); }
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(ROAD_W+2.5,0.8,0.5),archM);
+  beam.position.set(e.x,e.y+6,e.z); beam.rotation.y=Math.atan2(e.tx,e.tz)+Math.PI/2; scene.add(beam);
+})();
+
+// car
+const car=new THREE.Group();
+(function(){
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.7,4.2),new THREE.MeshLambertMaterial({color:0xd9442f})); body.position.y=0.65;
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.6,2.0),new THREE.MeshLambertMaterial({color:0x22313a})); cab.position.set(0,1.25,-0.2);
+  car.add(body,cab);
+  const wg=new THREE.CylinderGeometry(0.38,0.38,0.3,10), wm=new THREE.MeshLambertMaterial({color:0x111111});
+  for(const [x,z] of [[-0.9,1.35],[0.9,1.35],[-0.9,-1.35],[0.9,-1.35]]){ const w=new THREE.Mesh(wg,wm); w.rotation.z=Math.PI/2; w.position.set(x,0.38,z); car.add(w); }
+  const lg=new THREE.BoxGeometry(0.4,0.15,0.05), lm=new THREE.MeshBasicMaterial({color:0xff2a1a});
+  for(const x of [-0.6,0.6]){ const l=new THREE.Mesh(lg,lm); l.position.set(x,0.8,-2.11); car.add(l); }
+})();
+scene.add(car);
+
+// ---------- STATE ----------
+const st={x:0,z:0,heading:0,speed:0,idx:0,t:0,running:false,done:false,off:0,camX:0,camY:0,camZ:0};
+function reset(){
+  const p=path[0]; st.x=p.x+p.nx*1.8; st.z=p.z+p.nz*1.8; st.heading=Math.atan2(p.tx,p.tz);
+  st.speed=0; st.idx=0; st.t=0; st.done=false; st.camInit=false; st.hits=0; st.fines=0; st.overT=0; st.crashT=0; try{ Traffic.reset(); Cards.reset(); }catch(_){}
+}
+reset();
+const input={gas:false,brake:false,left:false,right:false};
+function bindBtn(id,key){
+  const el=document.getElementById(id);
+  const on=e=>{e.preventDefault(); input[key]=true; el.classList.add('on');};
+  const off=e=>{e.preventDefault(); input[key]=false; el.classList.remove('on');};
+  el.addEventListener('pointerdown',e=>{try{el.setPointerCapture(e.pointerId)}catch(_){} on(e)});
+  el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('lostpointercapture',off);
+}
+bindBtn('gas','gas'); bindBtn('brake','brake'); bindBtn('left-btn','left'); bindBtn('right-btn','right');
+const keymap={ArrowUp:'gas',ArrowDown:'brake',ArrowLeft:'left',ArrowRight:'right',w:'gas',s:'brake',a:'left',d:'right'};
+addEventListener('keydown',e=>{const k=keymap[e.key]; if(k){input[k]=true; e.preventDefault();}});
+addEventListener('keyup',e=>{const k=keymap[e.key]; if(k){input[k]=false;}});
+
+function nearest(){ // local search around current index
+  let best=st.idx, bd=Infinity;
+  const lo=Math.max(0,st.idx-40), hi=Math.min(path.length-1,st.idx+80);
+  for(let i=lo;i<=hi;i++){ const p=path[i]; const d=(p.x-st.x)**2+(p.z-st.z)**2; if(d<bd){bd=d;best=i;} }
+  st.idx=best; const p=path[best];
+  const lat=(st.x-p.x)*p.nx+(st.z-p.z)*p.nz; // signed lateral offset
+  return {p,lat};
+}
+
+
+// ---------- TRAFFIC ----------
+// Simulated traffic typical of a Boyacá mountain road: cars, busetas, trucks, motos; both directions.
+// Speeds follow curve sharpness and slope. Not live data: there is no public live-traffic feed for this road.
+const CURV=(function(){ // speed limit per path index from curve radius
+  const lim=new Float32Array(path.length);
+  for(let i=0;i<path.length;i++){
+    const a=path[Math.max(0,i-4)], b=path[Math.min(path.length-1,i+4)];
+    let d=Math.atan2(b.tx,b.tz)-Math.atan2(a.tx,a.tz); d=Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));
+    const R=32/Math.max(d,1e-3); const v=Math.sqrt(2.2*R)*3.6; lim[i]=v;
+  }
+  const out=new Float32Array(path.length); // look ahead / behind 60 m so signs appear before curves
+  for(let i=0;i<path.length;i++){ let m=Infinity; for(let j=-15;j<=15;j++){const k=i+j; if(k>=0&&k<path.length) m=Math.min(m,lim[k]);} out[i]=m; }
+  // posted limit: 30 / 40 / 60
+  for(let i=0;i<path.length;i++) out[i]= out[i]<38?30: out[i]<55?40:60;
+  return out;
+})();
+const TYPES={
+  car:{len:4.2,w:1.8,h:1.4,v:[42,58],colors:[0xf0f0f0,0x2b5fa8,0x7a7a7a,0xb31d1d,0x1f1f1f]},
+  buseta:{len:8,w:2.3,h:2.8,v:[38,52],colors:[0x1d8a4e,0xe0a800,0xd6402b]},
+  truck:{len:9,w:2.4,h:3.0,v:[22,38],colors:[0xe2e2e2,0x2c4f7c,0xc8102e]},
+  moto:{len:2,w:0.7,h:1.5,v:[45,65],colors:[0x111111,0xc81d25]},
+};
+// 3D models: Kenney Car Kit (CC0). Each traffic type maps to a few models; motos stay hand-built.
+const MODEL_SET={car:['sedan','sedan','taxi','taxi','suv','hatchbackSports','police'],buseta:['van'],truck:['truck','truckFlat','delivery']};
+const MODEL_LEN={car:4.3,buseta:5.6,truck:7.5,player:4.3};
+const MODELS={};
+let modelSeed=5; const mrnd=()=>(modelSeed=(modelSeed*16807)%2147483647)/2147483647;
+function prepModel(scene0){ // center, sit on ground, face +z, length 1
+  const box=new THREE.Box3().setFromObject(scene0), size=box.getSize(new THREE.Vector3()), c=box.getCenter(new THREE.Vector3());
+  const holder=new THREE.Group(), inner=new THREE.Group(); inner.add(scene0);
+  scene0.position.set(-c.x,-box.min.y,-c.z);
+  inner.rotation.y= size.x>size.z ? Math.PI/2 : Math.PI; // Kenney models face -z; the game drives toward +z
+  const L=Math.max(size.x,size.z); holder.add(inner); holder.userData.len=L; return holder;
+}
+function modelFor(type,color){
+  const set=MODEL_SET[type]; if(!set) return null;
+  const name=set[Math.floor(mrnd()*set.length)], base=MODELS[name]; if(!base) return null;
+  const m=base.clone(true); const k=MODEL_LEN[type]/base.userData.len; m.scale.setScalar(k);
+  if(color!=null && name!=='taxi' && name!=='police') m.traverse(o=>{ if(o.isMesh && o.material && /paint/i.test(o.material.name)){ o.material=o.material.clone(); o.material.color.setHex(color); } });
+  return m;
+}
+const PICK=['car','car','car','car','moto','moto','moto','buseta','buseta','truck','truck'];
+function meshFor(type,color){
+  const mm=modelFor(type,color); if(mm) return mm;
+  const T=TYPES[type], g=new THREE.Group(), mat=new THREE.MeshLambertMaterial({color});
+  const dark=new THREE.MeshLambertMaterial({color:0x1b2329}), wheel=new THREE.MeshLambertMaterial({color:0x111111});
+  if(type==='moto'){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,1.8),mat); b.position.y=0.7; g.add(b);
+    const r=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.8,0.45),new THREE.MeshLambertMaterial({color:0x334455})); r.position.set(0,1.3,-0.2); g.add(r);
+    const h=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,6),mat); h.position.set(0,1.85,-0.15); g.add(h);
+    for(const z of [-0.7,0.7]){const w=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.12,10),wheel); w.rotation.z=Math.PI/2; w.position.set(0,0.32,z); g.add(w);}
+  } else {
+    const body=new THREE.Mesh(new THREE.BoxGeometry(T.w,T.h*0.55,T.len),mat); body.position.y=0.4+T.h*0.275; g.add(body);
+    if(type==='car'){ const c=new THREE.Mesh(new THREE.BoxGeometry(T.w*0.9,T.h*0.4,T.len*0.5),dark); c.position.set(0,0.4+T.h*0.72,-0.2); g.add(c); }
+    else if(type==='buseta'){ const c=new THREE.Mesh(new THREE.BoxGeometry(T.w*1.01,T.h*0.35,T.len*0.92),dark); c.position.set(0,0.4+T.h*0.7,0); g.add(c);
+      const roof=new THREE.Mesh(new THREE.BoxGeometry(T.w,0.15,T.len),new THREE.MeshLambertMaterial({color:0xf4f4f4})); roof.position.y=0.4+T.h*0.92; g.add(roof); }
+    else { const cab=new THREE.Mesh(new THREE.BoxGeometry(T.w,T.h*0.7,2.2),mat); cab.position.set(0,0.4+T.h*0.45,T.len/2-1.1); g.add(cab);
+      const box=new THREE.Mesh(new THREE.BoxGeometry(T.w,T.h*0.8,T.len-2.6),new THREE.MeshLambertMaterial({color:0x8a6a3a})); box.position.set(0,0.4+T.h*0.5,-1.2); g.add(box); }
+    const hl=new THREE.MeshBasicMaterial({color:0xfff6c0}), tl=new THREE.MeshBasicMaterial({color:0xff2a1a});
+    for(const x of [-T.w*0.32,T.w*0.32]){ const a=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.18,0.05),hl); a.position.set(x,0.75,T.len/2+0.01); g.add(a);
+      const b=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.18,0.05),tl); b.position.set(x,0.75,-T.len/2-0.01); g.add(b); }
+    for(const x of [-T.w/2,T.w/2]) for(const z of [T.len/2-1,-T.len/2+1]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.3,10),wheel); w.rotation.z=Math.PI/2; w.position.set(x,0.42,z); g.add(w); }
+  }
+  return g;
+}
+const Traffic=(function(){
+  const cars=[]; let seed=99; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const N=14, RANGE=900;
+  function place(v){
+    const f=v.s/STEP, i=Math.max(0,Math.min(path.length-2,Math.floor(f))), t=f-i, a=path[i], b=path[i+1];
+    const x=a.x+(b.x-a.x)*t, z=a.z+(b.z-a.z)*t, y=a.y+(b.y-a.y)*t;
+    const nx=a.nx, nz=a.nz, off=v.dir*1.8;
+    v.x=x+nx*off; v.z=z+nz*off; v.i=i;
+    v.m.position.set(v.x,y,v.z);
+    const h=Math.atan2(a.tx,a.tz)+(v.dir<0?Math.PI:0);
+    const sl=Math.atan2(b.y-a.y,STEP)*(v.dir<0?-1:1);
+    v.m.rotation.set(-sl,h,0,'YXZ'); v.h=h;
+  }
+  function spawn(v,initial){
+    const ps=path[st.idx].s;
+    v.type=PICK[Math.floor(rnd()*PICK.length)]; const T=TYPES[v.type];
+    v.dir=rnd()<0.55?-1:1; // -1 oncoming
+    let s;
+    if(initial) s=ps+60+rnd()*RANGE*0.9;
+    else s= v.dir<0 ? ps+RANGE*(0.6+rnd()*0.4) : (rnd()<0.7? ps+RANGE*(0.5+rnd()*0.5) : ps-RANGE*0.6);
+    v.s=Math.max(20,Math.min(TOTAL-20,s));
+    v.cruise=T.v[0]+rnd()*(T.v[1]-T.v[0]); v.v=v.cruise/3.6*0.8;
+    if(v.m) scene.remove(v.m);
+    v.m=meshFor(v.type,T.colors[Math.floor(rnd()*T.colors.length)]); scene.add(v.m); place(v);
+  }
+  function reset(){ seed=99; cars.forEach(v=>scene.remove(v.m)); cars.length=0; for(let k=0;k<N;k++){const v={}; spawn(v,true); cars.push(v);} }
+  function update(dt){
+    const ps=path[st.idx].s;
+    for(const v of cars){
+      const T=TYPES[v.type];
+      const i=Math.max(0,Math.min(path.length-1,Math.round(v.s/STEP)));
+      // target speed: own cruise, posted limit (+ a little), heavy vehicles slow on climbs
+      let target=Math.min(v.cruise, CURV[i]*(v.type==='moto'?1.25:1.1));
+      const ahead=path[Math.max(0,Math.min(path.length-1,i+v.dir*5))];
+      const grade=(ahead.y-path[i].y)/(5*STEP); // + uphill in travel direction
+      if((v.type==='truck'||v.type==='buseta') && grade>0.03) target*=Math.max(0.45,1-grade*6);
+      let tv=target/3.6;
+      // follow the vehicle ahead in the same lane (including the player)
+      let gap=Infinity;
+      for(const o of cars){ if(o===v||o.dir!==v.dir) continue; const d=(o.s-v.s)*v.dir; if(d>0&&d<gap) gap=d-(TYPES[o.type].len+T.len)/2; }
+      if(v.dir>0){ const d=ps-v.s; if(d>0) gap=Math.min(gap,d-(4.2+T.len)/2); }
+      if(gap<40) tv=Math.min(tv, Math.max(0,(gap-6)/3));
+      v.v+= Math.max(-6*dt,Math.min(2*dt,tv-v.v));
+      v.s+= v.v*dt*v.dir;
+      if(Math.abs(v.s-ps)>RANGE || v.s<5 || v.s>TOTAL-5) spawn(v,false);
+      place(v);
+      // collision with player (oriented box test, approximated)
+      const dx=st.x-v.x, dz=st.z-v.z;
+      const lz=dx*Math.sin(v.h)+dz*Math.cos(v.h), lx=dx*Math.cos(v.h)-dz*Math.sin(v.h);
+      if(Math.abs(lz)<(T.len+4.2)/2*0.9 && Math.abs(lx)<(T.w+1.8)/2*0.9 && st.crashT<=0){
+        st.hits++; st.crashT=1.6; st.speed=0;
+        // push player back onto own lane behind the obstacle
+        const p=path[st.idx]; st.x=p.x+p.nx*1.8; st.z=p.z+p.nz*1.8; st.heading=Math.atan2(p.tx,p.tz);
+        if(v.dir<0) { v.s+=12; } else { v.s+=6; } v.v=0;
+      }
+    }
+    if(st.crashT>0) st.crashT-=dt;
+    // speed fines: more than 10 km/h over the posted limit for 2 s
+    const lim=CURV[st.idx];
+    if(st.speed*3.6>lim+10){ st.overT+=dt; if(st.overT>2){ st.fines++; st.overT=-3; } } else st.overT=Math.min(st.overT,0)+dt*0;
+  }
+  function hud(p){
+    const lim=CURV[st.idx];
+    $('limN').textContent=lim; $('limit').classList.toggle('over',st.speed*3.6>lim+10);
+    $('hits').textContent=st.hits; $('fines').textContent=st.fines;
+    $('crash').style.opacity=st.crashT>0?1:0;
+    if(!hud.n||++hud.n%30===0){ hud.n=1; // Street View link for the current spot, looking along the road
+      const lat=ROUTE.points[0][0]-p.z/R*180/Math.PI, lng=ROUTE.points[0][1]+p.x/(R*Math.cos(lat0))*180/Math.PI;
+      const hd=((st.heading*180/Math.PI)%360+360)%360;
+      $('sv').href=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lng.toFixed(6)}&heading=${Math.round(hd)}`; }
+  }
+  function reskin(){ cars.forEach(v=>{ scene.remove(v.m); const T=TYPES[v.type]; v.m=meshFor(v.type,T.colors[Math.floor(rnd()*T.colors.length)]); scene.add(v.m); place(v); }); }
+  return {reset,update,hud,cars,reskin};
+})();
+Traffic.reset();
+
+
+// ---------- PHOTOS ----------
+// Free photos from Wikimedia Commons, shown as postcards when the car passes their spot (km along the route).
+const PHOTOS=window.PHOTOS||[];
+const Cards=(function(){
+  let shown=-1, until=0;
+  function update(s,t){
+    for(let k=PHOTOS.length-1;k>=0;k--){ if(s>=PHOTOS[k].km*1000){ if(k>shown){ shown=k; until=t+7; const P=PHOTOS[k];
+          $('cardImg').src=P.src; $('cardT').textContent=P.title; $('cardC').textContent=P.credit; $('card').hidden=false; } break; } }
+    if(t>until) $('card').hidden=true;
+  }
+  function reset(){ shown=-1; until=0; $('card').hidden=true; }
+  return {update,reset};
+})();
+
+
+// ---------- LOAD 3D MODELS ----------
+(function(){
+  if(!THREE.GLTFLoader) return;
+  const names=['sedan','taxi','suv','hatchbackSports','police','van','truck','truckFlat','delivery','sedanSports'];
+  const L=new THREE.GLTFLoader(); let left=names.length;
+  names.forEach(n=>L.load('modelos/'+n+'.json',g=>{ g.scene.traverse(o=>{ if(o.isMesh && o.material){ const m=o.material; o.material=new THREE.MeshLambertMaterial({color:m.color,map:m.map||null,name:m.name}); } }); MODELS[n]=prepModel(g.scene); done(); },undefined,()=>done()));
+  function done(){ if(--left>0) return;
+    Traffic.reskin();
+    if(MODELS.sedanSports){ // player car
+      const m=MODELS.sedanSports.clone(true); m.scale.setScalar(MODEL_LEN.player/MODELS.sedanSports.userData.len);
+      m.traverse(o=>{ if(o.isMesh && /paint/i.test(o.material.name)){ o.material=o.material.clone(); o.material.color.setHex(0xd9442f); } });
+      while(car.children.length) car.remove(car.children[0]); car.add(m);
+    }
+  }
+})();
+
+
+// ---------- TILT STEERING (gyroscope) ----------
+// Steer by tilting the phone like a wheel. Neutral = how the phone is held when driving starts.
+// Arrows keep working. Some viewers block motion sensors; then we say so and stay on arrows.
+const Tilt=(function(){
+  const T={steer:0,on:false,got:false,zero:null,raw:0};
+  function reading(e){
+    const ang=(screen.orientation&&screen.orientation.angle!=null)?screen.orientation.angle:(window.orientation||0);
+    if(e.beta==null||e.gamma==null) return null;
+    if(ang===90) return -e.beta;            // landscape, top of phone to the left
+    if(ang===270||ang===-90) return e.beta; // landscape, top of phone to the right
+    return -e.gamma;                        // portrait
+  }
+  function onOri(e){
+    const r=reading(e); if(r==null) return; T.got=true; T.raw=r;
+    if(T.zero==null) T.zero=r;
+    let d=r-T.zero; if(Math.abs(d)<3) d=0; else d-=Math.sign(d)*3;   // 3° dead zone
+    T.steer=T.on?Math.max(-1,Math.min(1,d/22)):0;                      // full lock at 25°
+    $('tiltVal').textContent=(d>0?'◀ ':d<0?'▶ ':'')+Math.round(Math.abs(d))+'°';
+  }
+  async function enable(){
+    const msg=$('tiltMsg'); msg.hidden=true;
+    try{
+      if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+        try{ await DeviceOrientationEvent.requestPermission(); }catch(_){} // a 'denied' answer is checked below by whether data arrives
+      }
+      if(typeof DeviceOrientationEvent==='undefined') throw new Error('none');
+      addEventListener('deviceorientation',onOri);
+      T.on=true;
+      setTimeout(()=>{ if(!T.got){ T.on=false; $('tiltChk').checked=false; msg.hidden=false;
+        msg.textContent='Aquí no llegan datos del giroscopio (este visor o navegador lo bloquea). Sigue con las flechas.'; } },1500);
+    }catch(err){ console.warn('tilt',err); T.on=false; $('tiltChk').checked=false; msg.hidden=false;
+      msg.textContent='No se pudo activar el giroscopio en este navegador. Sigue con las flechas.'; }
+  }
+  function recenter(){ T.zero=T.got?T.raw:null; }
+  return {get steer(){return T.steer;}, get on(){return T.on;}, enable, recenter, disable(){T.on=false;T.steer=0;}};
+})();
+
+// ---------- LOOP ----------
+const $=id=>document.getElementById(id);
+const fmtT=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(st.running && !st.done){ step(dt); Traffic.update(dt); }
+  const {p,lat}=nearest();
+  const y=p.y + 0; // road height
+  car.position.set(st.x,y,st.z);
+  // pitch with slope
+  const q=path[Math.min(path.length-1,st.idx+2)], q0=path[Math.max(0,st.idx-2)];
+  car.rotation.set(-Math.atan2(q.y-q0.y, 4*STEP),st.heading,0,'YXZ');
+  // camera chase
+  const back=9, up=3.6;
+  const tx=st.x-Math.sin(st.heading)*back, tz=st.z-Math.cos(st.heading)*back, ty=y+up;
+  if(!st.camInit){st.camX=tx;st.camY=ty;st.camZ=tz;st.camInit=true;}
+  const k=1-Math.pow(0.002,dt);
+  st.camX+=(tx-st.camX)*k; st.camY+=(ty-st.camY)*k; st.camZ+=(tz-st.camZ)*k;
+  camera.position.set(st.camX,st.camY,st.camZ);
+  camera.lookAt(st.x+Math.sin(st.heading)*6,y+1.2,st.z+Math.cos(st.heading)*6);
+  renderer.render(scene,camera);
+  hud(p,lat); Traffic.hud(p); if(st.running) Cards.update(p.s,st.t);
+  requestAnimationFrame(frame);
+}
+function step(dt){
+  st.t+=dt;
+  const {lat}=nearest();
+  const off=Math.abs(lat)>hw+1.0;
+  const maxV=(off?25:110)/3.6;
+  if(input.gas) st.speed+= (st.speed<maxV?4.2:-6)*dt;
+  else st.speed-= 1.2*dt;
+  if(input.brake) st.speed-= 11*dt;
+  if(off && st.speed>maxV) st.speed-= 8*dt;
+  st.speed=Math.max(0,st.speed);
+  const steerRate=1.6/(1+st.speed*0.06);
+  const dir=Math.max(-1,Math.min(1,(input.left?1:0)-(input.right?1:0)+Tilt.steer));
+  st.heading+= dir*steerRate*dt*Math.min(1,st.speed/3);
+  st.x+=Math.sin(st.heading)*st.speed*dt; st.z+=Math.cos(st.heading)*st.speed*dt;
+  if(Math.abs(lat)>hw+30){ // fell off the mountain: put back on the road
+    const p=path[st.idx]; st.x=p.x+p.nx*1.8; st.z=p.z+p.nz*1.8; st.heading=Math.atan2(p.tx,p.tz); st.speed=0;
+  }
+  st.off=off;
+  if(st.idx>=path.length-3){ st.done=true; finish(); }
+}
+const mini=$('mini'), mctx=mini.getContext('2d');
+let mb=null;
+function drawMiniBase(){
+  let minx=Infinity,maxx=-Infinity,minz=Infinity,maxz=-Infinity;
+  for(const p of path){minx=Math.min(minx,p.x);maxx=Math.max(maxx,p.x);minz=Math.min(minz,p.z);maxz=Math.max(maxz,p.z);}
+  const sc=200/Math.max(maxx-minx,maxz-minz);
+  mb={minx,minz,sc,ox:(240-(maxx-minx)*sc)/2,oz:(240-(maxz-minz)*sc)/2};
+}
+drawMiniBase();
+const mxy=p=>[mb.ox+(p.x-mb.minx)*mb.sc, mb.oz+(p.z-mb.minz)*mb.sc];
+function hud(p,lat){
+  $('kmh').textContent=Math.round(st.speed*3.6);
+  const left=Math.max(0,TOTAL-p.s);
+  $('left').textContent= left>=1000? (left/1000).toFixed(1)+' km' : Math.round(left)+' m';
+  $('time').textContent=fmtT(st.t);
+  $('alt').textContent=Math.round(p.y)+' m';
+  $('barFill').style.width=(100*p.s/TOTAL).toFixed(1)+'%';
+  $('warn').style.opacity=st.off&&st.running?1:0;
+  mctx.clearRect(0,0,240,240);
+  mctx.lineWidth=5; mctx.strokeStyle='rgba(255,255,255,.35)'; mctx.beginPath();
+  path.forEach((q,i)=>{if(i%5)return; const [a,b]=mxy(q); i?mctx.lineTo(a,b):mctx.moveTo(a,b);}); mctx.stroke();
+  mctx.strokeStyle='#f2b705'; mctx.beginPath();
+  for(let i=0;i<=st.idx;i+=5){const [a,b]=mxy(path[i]); i?mctx.lineTo(a,b):mctx.moveTo(a,b);} mctx.stroke();
+  const [cx,cz]=mxy({x:st.x,z:st.z}); mctx.fillStyle='#d9442f'; mctx.beginPath(); mctx.arc(cx,cz,9,0,7); mctx.fill();
+  mctx.strokeStyle='#fff'; mctx.lineWidth=3; mctx.stroke();
+}
+function finish(){
+  st.running=false;
+  const avg=TOTAL/1000/(st.t/3600);
+  $('endTitle').textContent=ROUTE.to;
+  $('endStats').textContent=`${(TOTAL/1000).toFixed(1)} km en ${fmtT(st.t)} · promedio ${Math.round(avg)} km/h · ${st.hits} choques · ${st.fines} multas`;
+  $('end').hidden=false;
+}
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.fov=w<h?75:60; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+$('routeName').textContent=ROUTE.name;
+if(ROUTE.real){ $('routeTag').textContent='Ruta real'; let lo=Infinity,hi=-Infinity; path.forEach(p=>{lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}); $('routeNote').textContent=`${(TOTAL/1000).toFixed(1)} km por la carretera real, con sus curvas. Bajas de ${Math.round(hi)} m al cañón del Chicamocha (${Math.round(lo)} m) y vuelves a subir.`; }
+$('tiltChk').onchange=e=>{ if(e.target.checked) Tilt.enable(); else Tilt.disable(); };
+$('goBtn').onclick=()=>{ $('start').hidden=true; st.running=true; Tilt.recenter(); $('tiltBadge').hidden=!Tilt.on; };
+$('againBtn').onclick=()=>{ reset(); $('end').hidden=true; st.running=true; Tilt.recenter(); };
+requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
